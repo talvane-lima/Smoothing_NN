@@ -138,7 +138,6 @@ def plot_training_and_evaluation_metrics(
     ax_roc.grid(True, linestyle=":", alpha=0.6)
 
     # Panel 3: Confusion Matrices (Bottom Row)
-    class_labels = ["No Deposit (0)", "Deposit (1)"]
 
     for i, name in enumerate(names):
         ax_cm = fig.add_subplot(gs[1, i])

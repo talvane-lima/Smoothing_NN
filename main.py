@@ -249,7 +249,7 @@ def main():
     fourth_name = list(results_collection.keys())[-1]
     fourth_probs = results_collection[fourth_name]["probs"]
     fourth_targets = results_collection[fourth_name]["targets"]
-    sweep_thresholds = [0.25, 0.275, 0.3, 0.325, 0.35, 0.375, 0.4]
+    sweep_thresholds = [0.25, 0.275, 0.3, 0.325, 0.35, 0.375]
     sweep_results = compute_threshold_sweep(fourth_probs, fourth_targets, sweep_thresholds)
 
     print("\n" + "=" * 115)
