@@ -254,29 +254,44 @@ def plot_threshold_table(
 
 def plot_threshold_histograms(
     probs: np.ndarray,
+    targets: np.ndarray,
     sweep_results: list,
     experiment_name: str = "Smoothing (ε = 0.45)",
     save_path: str = "results/threshold_histograms.png"
 ):
     """
-    Plots a grid of histograms for the predicted probabilities of the positive class.
-    For each cutoff threshold, the bars >= cutoff are colored distinctly to show the 
-    population of contacted clients.
+    Plots a grid of histograms for the predicted probabilities of the entire test dataset (all 9,043 instances).
+    For each cutoff threshold, the bars >= cutoff are highlighted using the exact model color (tab10 index 3),
+    while the bars < cutoff remain muted.
     """
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     sns.set_theme(style="whitegrid", font_scale=1.0)
     
-    pos_probs = probs[:, 1] if probs.ndim > 1 else probs
+    # Extract probabilities for the whole test dataset
+    all_probs = probs[:, 1] if probs.ndim > 1 else probs
+    total_samples = len(all_probs)
+    n_class_0 = int((targets == 0).sum())
+    n_class_1 = int((targets == 1).sum())
+    
+    # Range of the entire test dataset
+    p_min = float(np.min(all_probs))
+    p_max = float(np.max(all_probs))
+    
+    # Use the exact same color palette as the Label Smoothing Study (tab10 blue)
+    palette = sns.color_palette("tab10", 4)
+    active_color = palette[0]     # Blue color
+    inactive_color = "#94A3B8"   # Slate gray for P < Cutoff
     
     n_plots = len(sweep_results)
     cols = 2
     rows = (n_plots + 1) // cols
     
-    fig, axes = plt.subplots(rows, cols, figsize=(12, 3.5 * rows))
+    fig, axes = plt.subplots(rows, cols, figsize=(12.5, 3.6 * rows))
     axes = axes.flatten()
     
-    # Pre-compute histogram to keep bins consistent across all subplots
-    counts, bin_edges = np.histogram(pos_probs, bins=40, range=(0.0, 1.0))
+    # Dynamic binning spanning the actual distribution range of the entire test set
+    bins = np.linspace(p_min - 0.005, p_max + 0.005, 35)
+    counts, bin_edges = np.histogram(all_probs, bins=bins)
     bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
     bin_widths = bin_edges[1:] - bin_edges[:-1]
     
@@ -284,49 +299,64 @@ def plot_threshold_histograms(
         ax = axes[i]
         t = row["threshold"]
         
-        # Color array: Blue if >= threshold, else Light Gray
-        bar_colors = ["#2563EB" if c >= t else "#E2E8F0" for c in bin_centers]
+        # Color array: Model's tab10 color if >= threshold, else Slate Gray
+        bar_colors = [active_color if c >= t else inactive_color for c in bin_centers]
         
         ax.bar(
             bin_centers, 
             counts, 
             width=bin_widths, 
             color=bar_colors, 
-            edgecolor="#475569", 
-            linewidth=0.5, 
-            alpha=0.9
+            edgecolor="black", 
+            linewidth=0.6, 
+            alpha=0.7
+        )
+        
+        # Add KDE curve over the histogram
+        sns.kdeplot(
+            all_probs, 
+            ax=ax, 
+            color="#1E293B", 
+            linewidth=1.5, 
+            bw_adjust=0.8
         )
         
         # Vertical line for cutoff
-        ax.axvline(t, color="#DC2626", linestyle="--", linewidth=2, label=f"Cutoff (T = {t:.3f})")
+        ax.axvline(t, color="#1E293B", linestyle="--", linewidth=1.8, label=rf"Cutoff ($T = {t:.3f}$)")
         
-        # Info text
+        # Info box with full dataset context
         info_text = (
-            f"Recall: {row['recall']:.1f}%\n"
-            f"Tx. Conversão: {row['conversion_rate']:.1f}%\n"
-            f"Contatados: {row['pos_predicted']:,} ({row['contact_rate']:.1f}%)"
+            f"Recall: {row['recall']:.2f}%\n"
+            f"Tx. Conversão: {row['conversion_rate']:.2f}%\n"
+            f"Contatados: {row['pos_predicted']:,} / {total_samples:,} ({row['contact_rate']:.1f}%)\n"
+            f"Convertidos: {row['true_positives']:,} / {n_class_1:,}"
         )
         ax.text(
             0.96, 0.94, 
             info_text,
             transform=ax.transAxes,
-            fontsize=10,
+            fontsize=9.2,
             verticalalignment='top',
             horizontalalignment='right',
-            bbox=dict(boxstyle='round,pad=0.5', facecolor='white', alpha=0.9, edgecolor='#CBD5E1')
+            bbox=dict(boxstyle='round,pad=0.5', facecolor='white', alpha=0.92, edgecolor='#CBD5E1')
         )
         
-        ax.set_title(rf"Cutoff $P \geq {t:.3f}$", fontweight="bold", fontsize=11)
-        ax.set_xlabel("Probabilidade Predita (Classe Positiva)", fontsize=10)
-        ax.set_ylabel("Frequência", fontsize=10)
-        ax.legend(loc="upper left")
-        ax.set_xlim(0, 1)
+        ax.set_title(rf"Cutoff $P \geq {t:.3f}$  |  Faixa Real: [{p_min:.3f}, {p_max:.3f}]", fontweight="bold", fontsize=11)
+        ax.set_xlabel("Probabilidade Predita P(Depósito = Sim)", fontsize=9.5)
+        ax.set_ylabel("Frequência / Densidade", fontsize=9.5)
+        ax.legend(loc="upper left", fontsize=9)
+        ax.set_xlim(p_min - 0.015, p_max + 0.015)
 
     # Hide any unused subplots
     for j in range(i + 1, len(axes)):
         axes[j].set_visible(False)
         
-    plt.suptitle(f"Análise de Cutoff - População Selecionada | Modelo: {experiment_name}", fontsize=14, fontweight="bold", y=0.98)
+    plt.suptitle(
+        f"Distribuição Completa de Probabilidades no Conjunto de Teste (N = {total_samples:,} | {n_class_0:,} Não / {n_class_1:,} Sim)\nModelo: {experiment_name}",
+        fontsize=13,
+        fontweight="bold",
+        y=0.99
+    )
     plt.tight_layout()
     plt.savefig(save_path, dpi=300, bbox_inches="tight")
     plt.close()

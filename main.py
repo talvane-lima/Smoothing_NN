@@ -279,7 +279,7 @@ def main():
     plot_threshold_table(sweep_results, experiment_name=fourth_name, save_path="results/threshold_table.png")
     
     # Study 4: Threshold Probability Histograms
-    plot_threshold_histograms(fourth_probs, sweep_results, experiment_name=fourth_name, save_path="results/threshold_histograms.png")
+    plot_threshold_histograms(fourth_probs, fourth_targets, sweep_results, experiment_name=fourth_name, save_path="results/threshold_histograms.png")
     
     print(f"\nAll studies completed successfully! Check the 'results/' folder:\n  1. results/label_smoothing_study.png\n  2. results/training_and_metrics.png\n  3. results/threshold_table.png\n  4. results/threshold_histograms.png\n")
 
