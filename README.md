@@ -67,3 +67,6 @@ python main.py --balance_method none
 
 3. `results/threshold_table.png`:
    * Tabela Visual Executiva: Mapeamento de Cutoff (T), Recall (Captação), Clientes Contatados (% base), Convertidos e Taxa de Conversão (%) para o 4º Algoritmo ($\epsilon = 0.45$).
+
+4. `results/threshold_histograms.png`:
+   * Painéis de Histogramas de Probabilidade: Visualização da distribuição das probabilidades com destaque colorido para barras com $P \geq \text{Cutoff}$, detalhando Recall, Clientes Contatados e Taxa de Conversão para cada limiar avaliado no 4º Algoritmo ($\epsilon = 0.45$).

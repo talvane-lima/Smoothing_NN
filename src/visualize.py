@@ -250,3 +250,84 @@ def plot_threshold_table(
     plt.savefig(save_path, dpi=300, bbox_inches="tight")
     plt.close()
     print(f"Threshold table figure saved to: '{save_path}'")
+
+
+def plot_threshold_histograms(
+    probs: np.ndarray,
+    sweep_results: list,
+    experiment_name: str = "Smoothing (ε = 0.45)",
+    save_path: str = "results/threshold_histograms.png"
+):
+    """
+    Plots a grid of histograms for the predicted probabilities of the positive class.
+    For each cutoff threshold, the bars >= cutoff are colored distinctly to show the 
+    population of contacted clients.
+    """
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    sns.set_theme(style="whitegrid", font_scale=1.0)
+    
+    pos_probs = probs[:, 1] if probs.ndim > 1 else probs
+    
+    n_plots = len(sweep_results)
+    cols = 2
+    rows = (n_plots + 1) // cols
+    
+    fig, axes = plt.subplots(rows, cols, figsize=(12, 3.5 * rows))
+    axes = axes.flatten()
+    
+    # Pre-compute histogram to keep bins consistent across all subplots
+    counts, bin_edges = np.histogram(pos_probs, bins=40, range=(0.0, 1.0))
+    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+    bin_widths = bin_edges[1:] - bin_edges[:-1]
+    
+    for i, row in enumerate(sweep_results):
+        ax = axes[i]
+        t = row["threshold"]
+        
+        # Color array: Blue if >= threshold, else Light Gray
+        bar_colors = ["#2563EB" if c >= t else "#E2E8F0" for c in bin_centers]
+        
+        ax.bar(
+            bin_centers, 
+            counts, 
+            width=bin_widths, 
+            color=bar_colors, 
+            edgecolor="#475569", 
+            linewidth=0.5, 
+            alpha=0.9
+        )
+        
+        # Vertical line for cutoff
+        ax.axvline(t, color="#DC2626", linestyle="--", linewidth=2, label=f"Cutoff (T = {t:.3f})")
+        
+        # Info text
+        info_text = (
+            f"Recall: {row['recall']:.1f}%\n"
+            f"Tx. Conversão: {row['conversion_rate']:.1f}%\n"
+            f"Contatados: {row['pos_predicted']:,} ({row['contact_rate']:.1f}%)"
+        )
+        ax.text(
+            0.96, 0.94, 
+            info_text,
+            transform=ax.transAxes,
+            fontsize=10,
+            verticalalignment='top',
+            horizontalalignment='right',
+            bbox=dict(boxstyle='round,pad=0.5', facecolor='white', alpha=0.9, edgecolor='#CBD5E1')
+        )
+        
+        ax.set_title(rf"Cutoff $P \geq {t:.3f}$", fontweight="bold", fontsize=11)
+        ax.set_xlabel("Probabilidade Predita (Classe Positiva)", fontsize=10)
+        ax.set_ylabel("Frequência", fontsize=10)
+        ax.legend(loc="upper left")
+        ax.set_xlim(0, 1)
+
+    # Hide any unused subplots
+    for j in range(i + 1, len(axes)):
+        axes[j].set_visible(False)
+        
+    plt.suptitle(f"Análise de Cutoff - População Selecionada | Modelo: {experiment_name}", fontsize=14, fontweight="bold", y=0.98)
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=300, bbox_inches="tight")
+    plt.close()
+    print(f"Threshold histograms saved to: '{save_path}'")

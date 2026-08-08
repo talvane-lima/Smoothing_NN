@@ -34,7 +34,8 @@ from src.calibration import compute_metrics, compute_threshold_sweep
 from src.visualize import (
     plot_label_smoothing_study,
     plot_training_and_evaluation_metrics,
-    plot_threshold_table
+    plot_threshold_table,
+    plot_threshold_histograms
 )
 
 
@@ -277,7 +278,10 @@ def main():
     # Study 3: Clean Visual Table Figure (Cutoff, Recall, Contatados, Convertidos, Tx. Conversão)
     plot_threshold_table(sweep_results, experiment_name=fourth_name, save_path="results/threshold_table.png")
     
-    print(f"\nAll studies completed successfully! Check the 'results/' folder:\n  1. results/label_smoothing_study.png\n  2. results/training_and_metrics.png\n  3. results/threshold_table.png\n")
+    # Study 4: Threshold Probability Histograms
+    plot_threshold_histograms(fourth_probs, sweep_results, experiment_name=fourth_name, save_path="results/threshold_histograms.png")
+    
+    print(f"\nAll studies completed successfully! Check the 'results/' folder:\n  1. results/label_smoothing_study.png\n  2. results/training_and_metrics.png\n  3. results/threshold_table.png\n  4. results/threshold_histograms.png\n")
 
 
 if __name__ == "__main__":
