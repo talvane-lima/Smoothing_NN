@@ -260,9 +260,8 @@ def plot_threshold_histograms(
     save_path: str = "results/threshold_histograms.png"
 ):
     """
-    Plots a grid of histograms for the predicted probabilities of the entire test dataset (all 9,043 instances).
-    For each cutoff threshold, the bars >= cutoff are highlighted using the exact model color (tab10 index 3),
-    while the bars < cutoff remain muted.
+    Plots a grid of stacked histograms for the predicted probabilities, separated by True Class.
+    Bars >= cutoff change color to a darker shade to highlight contacted clients.
     """
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     sns.set_theme(style="whitegrid", font_scale=1.0)
@@ -277,10 +276,14 @@ def plot_threshold_histograms(
     p_min = float(np.min(all_probs))
     p_max = float(np.max(all_probs))
     
-    # Use the exact same color palette as the Label Smoothing Study (tab10 blue)
-    palette = sns.color_palette("tab10", 4)
-    active_color = palette[0]     # Blue color
-    inactive_color = "#94A3B8"   # Slate gray for P < Cutoff
+    # Define colors for Class 0 (Não) and Class 1 (Sim)
+    # Class 0: Reddish palette
+    active_color_0 = "#EF4444"    # Strong Red (False Positives when P >= T)
+    inactive_color_0 = "#FCA5A5"  # Light Red (True Negatives when P < T)
+    
+    # Class 1: Blue palette (User requested blue)
+    active_color_1 = "#2563EB"    # Strong Blue (True Positives when P >= T)
+    inactive_color_1 = "#93C5FD"  # Light Blue (False Negatives when P < T)
     
     n_plots = len(sweep_results)
     cols = 2
@@ -291,7 +294,9 @@ def plot_threshold_histograms(
     
     # Dynamic binning spanning the actual distribution range of the entire test set
     bins = np.linspace(p_min - 0.005, p_max + 0.005, 35)
-    counts, bin_edges = np.histogram(all_probs, bins=bins)
+    counts_0, bin_edges = np.histogram(all_probs[targets == 0], bins=bins)
+    counts_1, _ = np.histogram(all_probs[targets == 1], bins=bins)
+    
     bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
     bin_widths = bin_edges[1:] - bin_edges[:-1]
     
@@ -299,30 +304,45 @@ def plot_threshold_histograms(
         ax = axes[i]
         t = row["threshold"]
         
-        # Color array: Model's tab10 color if >= threshold, else Slate Gray
-        bar_colors = [active_color if c >= t else inactive_color for c in bin_centers]
+        # Color arrays
+        bar_colors_0 = [active_color_0 if c >= t else inactive_color_0 for c in bin_centers]
+        bar_colors_1 = [active_color_1 if c >= t else inactive_color_1 for c in bin_centers]
         
+        # Plot Class 0 (Bottom)
         ax.bar(
             bin_centers, 
-            counts, 
+            counts_0, 
             width=bin_widths, 
-            color=bar_colors, 
+            color=bar_colors_0, 
             edgecolor="black", 
             linewidth=0.6, 
-            alpha=0.7
+            alpha=0.85
         )
         
-        # Add KDE curve over the histogram
-        sns.kdeplot(
-            all_probs, 
-            ax=ax, 
-            color="#1E293B", 
-            linewidth=1.5, 
-            bw_adjust=0.8
+        # Plot Class 1 (Top, Stacked)
+        ax.bar(
+            bin_centers, 
+            counts_1, 
+            bottom=counts_0,
+            width=bin_widths, 
+            color=bar_colors_1, 
+            edgecolor="black", 
+            linewidth=0.6, 
+            alpha=0.85
         )
         
         # Vertical line for cutoff
         ax.axvline(t, color="#1E293B", linestyle="--", linewidth=1.8, label=rf"Cutoff ($T = {t:.3f}$)")
+        
+        # Custom Legend for Classes
+        from matplotlib.patches import Patch
+        legend_elements = [
+            Patch(facecolor=active_color_1, edgecolor='black', label='Sim (Acima T)'),
+            Patch(facecolor=inactive_color_1, edgecolor='black', label='Sim (Abaixo T)'),
+            Patch(facecolor=active_color_0, edgecolor='black', label='Não (Acima T)'),
+            Patch(facecolor=inactive_color_0, edgecolor='black', label='Não (Abaixo T)')
+        ]
+        ax.legend(handles=legend_elements, loc="upper left", fontsize=8.5)
         
         # Info box with full dataset context
         info_text = (
@@ -343,8 +363,7 @@ def plot_threshold_histograms(
         
         ax.set_title(rf"Cutoff $P \geq {t:.3f}$  |  Faixa Real: [{p_min:.3f}, {p_max:.3f}]", fontweight="bold", fontsize=11)
         ax.set_xlabel("Probabilidade Predita P(Depósito = Sim)", fontsize=9.5)
-        ax.set_ylabel("Frequência / Densidade", fontsize=9.5)
-        ax.legend(loc="upper left", fontsize=9)
+        ax.set_ylabel("Frequência (Stacked)", fontsize=9.5)
         ax.set_xlim(p_min - 0.015, p_max + 0.015)
 
     # Hide any unused subplots
@@ -352,7 +371,7 @@ def plot_threshold_histograms(
         axes[j].set_visible(False)
         
     plt.suptitle(
-        f"Distribuição Completa de Probabilidades no Conjunto de Teste (N = {total_samples:,} | {n_class_0:,} Não / {n_class_1:,} Sim)\nModelo: {experiment_name}",
+        f"Distribuição de Probabilidades por Classe (N = {total_samples:,} | {n_class_0:,} Não / {n_class_1:,} Sim)\nModelo: {experiment_name}",
         fontsize=13,
         fontweight="bold",
         y=0.99
