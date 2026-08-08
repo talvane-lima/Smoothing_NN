@@ -1,0 +1,20 @@
+# Byte-compiled / optimized
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.env
+.venv
+env/
+venv/
+
+# Results & Figures
+results/
+*.png
+*.pdf
+
+# IDEs
+.vscode/
+.idea/
+*.swp

@@ -1,0 +1,10 @@
+# Core Deep Learning
+torch>=2.0.0
+
+# Scientific Computing & Machine Learning
+numpy>=1.24.0
+scikit-learn>=1.2.0
+
+# Plotting & Visualization
+matplotlib>=3.7.0
+seaborn>=0.12.0
