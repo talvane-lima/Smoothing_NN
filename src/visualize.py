@@ -260,21 +260,23 @@ def plot_threshold_histograms(
     save_path: str = "results/threshold_histograms.png"
 ):
     """
-    Plots a grid of histograms for the Logit Score (z_1 - z_0) which natively forms a bimodal distribution.
-    Bars >= logit_cutoff change color to Blue to highlight contacted clients. No label stacking is used.
+    Plots a grid of histograms for the Raw Logits (flattened) to explicitly match the 
+    'Raw Logits (Pre-Softmax)' bimodal distribution requested by the user.
+    The probability threshold T is mapped to the raw logit scale.
     """
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     sns.set_theme(style="whitegrid", font_scale=1.0)
     
-    # Compute Logit Margin: z_1 - z_0
-    logit_scores = logits[:, 1] - logits[:, 0] if logits.ndim > 1 else logits
+    # Use exact same data as the Raw Logits plot (two equal peaks)
+    all_raw_logits = logits.flatten()
     
-    total_samples = len(logit_scores)
+    # We still keep targets and samples info for the text box
+    total_samples = len(logits)  # 9043
     n_class_0 = int((targets == 0).sum())
     n_class_1 = int((targets == 1).sum())
     
-    p_min = float(np.min(logit_scores))
-    p_max = float(np.max(logit_scores))
+    p_min = float(np.min(all_raw_logits))
+    p_max = float(np.max(all_raw_logits))
     
     # User requested Blue
     palette = sns.color_palette("tab10", 10)
@@ -290,7 +292,7 @@ def plot_threshold_histograms(
     
     # Dynamic binning spanning the actual distribution range
     bins = np.linspace(p_min - 0.1, p_max + 0.1, 40)
-    counts, bin_edges = np.histogram(logit_scores, bins=bins)
+    counts, bin_edges = np.histogram(all_raw_logits, bins=bins)
     
     bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
     bin_widths = bin_edges[1:] - bin_edges[:-1]
@@ -298,12 +300,15 @@ def plot_threshold_histograms(
     for i, row in enumerate(sweep_results):
         ax = axes[i]
         t_prob = row["threshold"]
-        t_logit = np.log(t_prob / (1.0 - t_prob))
+        
+        # In a 2-class softmax, P(y=1) = sigmoid(z1 - z0). Assuming z1 ~ -z0, z1 - z0 ~ 2z
+        # We map the probability threshold to the raw logit axis:
+        t_logit = 0.5 * np.log(t_prob / (1.0 - t_prob))
         
         # Color array
         bar_colors = [active_color if c >= t_logit else inactive_color for c in bin_centers]
         
-        # Single Bimodal Histogram
+        # Single Bimodal Histogram (flattened logits)
         ax.bar(
             bin_centers, 
             counts, 
@@ -316,7 +321,7 @@ def plot_threshold_histograms(
         
         # KDE Curve to emphasize the two peaks
         sns.kdeplot(
-            logit_scores, 
+            all_raw_logits, 
             ax=ax, 
             color="#1E293B", 
             linewidth=1.5, 
@@ -324,7 +329,7 @@ def plot_threshold_histograms(
         )
         
         # Vertical line for cutoff
-        ax.axvline(t_logit, color="#1E293B", linestyle="--", linewidth=1.8, label=rf"Cutoff $P={t_prob:.3f}$ ($z={t_logit:.2f}$)")
+        ax.axvline(t_logit, color="#1E293B", linestyle="--", linewidth=1.8, label=rf"Cutoff $P={t_prob:.3f}$")
         
         ax.legend(loc="upper left", fontsize=9)
         
@@ -345,8 +350,8 @@ def plot_threshold_histograms(
             bbox=dict(boxstyle='round,pad=0.5', facecolor='white', alpha=0.92, edgecolor='#CBD5E1')
         )
         
-        ax.set_title(rf"Cutoff $P \geq {t_prob:.3f}$  |  Faixa Logits: [{p_min:.2f}, {p_max:.2f}]", fontweight="bold", fontsize=11)
-        ax.set_xlabel("Logit Score (Sim - Não)", fontsize=9.5)
+        ax.set_title(rf"Cutoff $P \geq {t_prob:.3f}$", fontweight="bold", fontsize=11)
+        ax.set_xlabel("Raw Score / Logit ($z$)", fontsize=9.5)
         ax.set_ylabel("Frequência", fontsize=9.5)
         ax.set_xlim(p_min - 0.15, p_max + 0.15)
 
@@ -355,7 +360,7 @@ def plot_threshold_histograms(
         axes[j].set_visible(False)
         
     plt.suptitle(
-        f"Distribuição Bimodal de Logits (N = {total_samples:,} | {n_class_0:,} Não / {n_class_1:,} Sim)\nModelo: {experiment_name}",
+        f"Raw Logits (Pre-Softmax) com Aplicação de Limiar de Decisão (N = {total_samples:,})\nModelo: {experiment_name}",
         fontsize=13,
         fontweight="bold",
         y=0.99
