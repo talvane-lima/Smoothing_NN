@@ -301,9 +301,11 @@ def plot_threshold_histograms(
         ax = axes[i]
         t_prob = row["threshold"]
         
-        # In a 2-class softmax, P(y=1) = sigmoid(z1 - z0). Assuming z1 ~ -z0, z1 - z0 ~ 2z
-        # We map the probability threshold to the raw logit axis:
-        t_logit = 0.5 * np.log(t_prob / (1.0 - t_prob))
+        # To make the visual area exactly match the "Contatados" percentage,
+        # we place the cutoff line at the empirical quantile of the raw logits.
+        # This resolves the visual mismatch between the area colored and the text box.
+        contact_rate = row["pos_predicted"] / total_samples
+        t_logit = float(np.quantile(all_raw_logits, 1.0 - contact_rate))
         
         # Color array
         bar_colors = [active_color if c >= t_logit else inactive_color for c in bin_centers]
