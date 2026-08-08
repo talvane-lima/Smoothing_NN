@@ -1,25 +1,25 @@
-# Label Smoothing in Neural Networks: UCI Bank Marketing Study
+# Suavizacao de Rotulos em Redes Neurais: Estudo no Dataset UCI Bank Marketing
 
-An experimental research repository in PyTorch designed to investigate how Label Smoothing ($\epsilon \in [0.0, 0.45]$) alters:
-1. Raw Logit Scores ($z$ before Softmax): Preventing extreme activation magnitudes and bounded variance.
-2. Logit Margin Separation: Bounding $(z_{\text{correct}} - z_{\text{other}})$ to prevent exploding weight norms.
-3. Generalization and Calibration: Evaluating Accuracy, Precision, Recall, F1-Score, AUC-ROC, and Expected Calibration Error (ECE) on the UCI Bank Marketing dataset (45211 records).
-4. Training Dynamics and Classification Performance: Training and Validation Loss curves over epochs, ROC-AUC comparison, and Test Confusion Matrices.
+Repositorio de pesquisa experimental em PyTorch desenvolvido para investigar como a Suavizacao de Rotulos ($\epsilon \in [0.0, 0.45]$) altera:
+1. Valores Brutos de Logits ($z$ antes da Softmax): Prevencao de magnitudes extremas de ativacao e variancia delimitada.
+2. Separacao de Margens de Logits: Limitacao de $(z_{\text{correto}} - z_{\text{outro}})$ para evitar explosao da norma dos pesos.
+3. Generalizacao e Calibracao: Avaliacao de Acuracia, Precisao, Recall, F1-Score, AUC-ROC e Erro Esperado de Calibracao (ECE) no conjunto de dados UCI Bank Marketing (45211 registros).
+4. Dinamica de Treinamento e Desempenho de Classificacao: Curvas de Loss de Treino e Validacao ao longo das epocas, comparativo ROC-AUC e Matrizes de Confusao no Teste.
 
-## Mathematical Mechanics ($\epsilon \in \{0.0, 0.15, 0.30, 0.45\}$)
+## Mecanica Matematica ($\epsilon \in \{0.0, 0.15, 0.30, 0.45\}$)
 
-For binary classification ($y \in \{0, 1\}$) with smoothing factor $\epsilon$:
+Para classificacao binaria ($y \in \{0, 1\}$) com fator de suavizacao $\epsilon$:
 
-$$y_{\text{smooth}} = (1 - \epsilon) \cdot y + 0.5 \cdot \epsilon$$
+$$y_{\text{suave}} = (1 - \epsilon) \cdot y + 0.5 \cdot \epsilon$$
 
-| $\epsilon$ | Target $y=1$ ($y_{\text{smooth}}$) | Target $y=0$ ($y_{\text{smooth}}$) | Theoretical Max Confidence |
+| $\epsilon$ | Alvo $y=1$ ($y_{\text{suave}}$) | Alvo $y=0$ ($y_{\text{suave}}$) | Confianca Maxima Teorica |
 | :--- | :--- | :--- | :--- |
-| $\epsilon = 0.00$ (Baseline) | $1.000$ ($100.0\%$) | $0.000$ ($0.0\%$) | $\approx 100.0\%$ (Overconfident) |
+| $\epsilon = 0.00$ (Baseline) | $1.000$ ($100.0\%$) | $0.000$ ($0.0\%$) | $\approx 100.0\%$ (Superconfiante) |
 | $\epsilon = 0.15$ | $0.925$ ($92.5\%$) | $0.075$ ($7.5\%$) | $\approx 92.5\%$ |
 | $\epsilon = 0.30$ | $0.850$ ($85.0\%$) | $0.150$ ($15.0\%$) | $\approx 85.0\%$ |
 | $\epsilon = 0.45$ | $0.775$ ($77.5\%$) | $0.225$ ($22.5\%$) | $\approx 77.5\%$ |
 
-## Repository Structure
+## Estrutura do Repositorio
 
 ```text
 Smoothing_NN/
@@ -30,31 +30,31 @@ Smoothing_NN/
 │
 ├── src/
 │   ├── __init__.py
-│   ├── data.py              # Full-Tensor loader and preprocessor for UCI Bank Marketing (45.2k rows)
-│   ├── model.py             # Tabular MLP (128, 64, 32 with LayerNorm, ReLU and Dropout)
-│   ├── losses.py            # Label Smoothing Cross-Entropy Loss
-│   ├── calibration.py       # Metrics computation (Acc, Precision, Recall, F1, ECE, Brier)
-│   └── visualize.py         # Visualizers for calibration and training performance
+│   ├── data.py              # Carregamento e pre-processamento do UCI Bank Marketing (45.2k linhas)
+│   ├── model.py             # MLP Tabular (128, 64, 32 com LayerNorm, ReLU e Dropout)
+│   ├── losses.py            # Funcao de Perda Label Smoothing Cross-Entropy
+│   ├── calibration.py       # Calculo de metricas (Acc, Precisao, Recall, F1, ECE, Brier)
+│   └── visualize.py         # Visualizacoes de calibracao e desempenho de treino
 │
-└── main.py                  # Full-Batch benchmark runner (no mini-batches)
+└── main.py                  # Executor do benchmark em Full-Batch (sem mini-batches)
 ```
 
-## How to Run
+## Como Executar
 
-### Run Full-Batch Benchmark Experiment (500 Epochs + Early Stopping + Class Balancing)
+### Executar Experimento de Benchmark em Full-Batch (500 Epocas + Early Stopping + Balanceamento de Classes)
 
 ```bash
-# Default: Random Oversampling (balances training set to 50/50)
+# Padrao: Random Oversampling (balanceia treino para 50/50)
 python main.py
 
-# Alternatively: Cost-Sensitive Loss Weighting
+# Alternativa: Ponderacao de Perda Sensivel ao Custo
 python main.py --balance_method weights
 
-# Or without balancing
+# Ou sem balanceamento
 python main.py --balance_method none
 ```
 
-## Visual Outputs Generated
+## Saidas Visuais Geradas
 
 1. `results/label_smoothing_study.png`:
    * Linha 1: Histogramas dos Scores Brutos (Logits $z$) Antes da Softmax com Std e [min, max].
